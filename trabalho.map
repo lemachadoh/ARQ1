@@ -1,0 +1,15 @@
+Símbolo         Valor Decimal   Valor Hexadecimal
+-------         -------------   -----------------
+TESTE_CIF_DECIF            12                   C
+DECIFRAGEM                 18                  12
+AJUSTE_DECIFRAGEM          36                  24
+CIFRAGEM                   44                  2C
+AJUSTE_CIFRAGEM            60                  3C
+PROXIMO                    68                  44
+TERMINA                    82                  52
+SRC                       192                  C0
+DST                       193                  C1
+PASSO                     194                  C2
+OPERACAO                  195                  C3
+PTR_STRING                185                  B9
+PTR_RESULTADO             186                  BA

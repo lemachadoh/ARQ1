@@ -1,0 +1,89 @@
+;inicio do programa
+ORG 0
+LDR A, #0
+LDR B, #0
+
+LDR A, SRC        	 ; endereço que contém o endereço do inicio da string
+STR A, PTR_STRING    ; armazenar em um ponteiro auxiliar
+LDR A, DST       	 ; endereço que contém o endereço do inicio da string result
+STR A, PTR_RESULTADO ; armazenar em um ponteiro auxiliar
+
+;teste para o endereço 195, contem a informacao se irá ser trabalhado a cifragem ou decifragem
+teste_cif_decif:
+LDR A, 195      ; endereço que contém o codigo da operacao
+JZ cifragem		; caso 0: cifragem 
+JMP decifragem  ; decifragem
+
+decifragem:
+;for(i = 0, i = '/0', i++){
+;	char = PRT_STRING[i]
+LDR B, PTR_STRING, I     ; acessa string[i]
+
+;if( char == 0){
+;	break;}
+JZ termina
+
+; if ( char - *passo <= 65){
+;  ajuste}
+SUB B, 194
+STR B, PTR_RESULTADO, I ; Armazena o valor 
+; teste logico pra saber se precisa de ajuste
+LDR B, #65
+SUB B, PTR_RESULTADO, I  
+
+;else{  proximo}   
+JZ proximo
+JN proximo                   ; Salta para a seção 'proximo' se o resultado for negativo
+JMP ajuste_decifragem        ; Salta para a seção 'ajuste'
+
+ajuste_decifragem:
+; PTR_RESULTADO[i] =+26
+LDR B, PTR_RESULTADO, I
+ADD B, #26
+STR B, PTR_RESULTADO, I ; Armazena o valor 
+JMP proximo             ; Salta para 'proximo'
+
+
+cifragem: ;mesmo conceito de decifragem, porem soma-se o passo e subtrai 26 no ajuste
+LDR B, PTR_STRING, I    ; primeiro char
+JZ termina
+ADD B, 194
+STR B, PTR_RESULTADO, I ; Armazena o valor 
+; teste logico pra saber se precisa de ajuste
+SUB B, #90               ; Subtrai 90 do valor no registrador B
+JZ proximo
+JN proximo               ; Salta para a seção 'proximo' se o resultado for negativo
+JMP ajuste_cifragem      ; Salta para a seção 'ajuste'
+
+ajuste_cifragem:
+LDR B, PTR_RESULTADO, I
+SUB B, #26              ; Subtrai 26 do valor no registrador b
+STR B, PTR_RESULTADO, I ; Armazena o valor 
+JMP proximo             ; Salta para 'proximo'
+
+proximo:
+LDR A, PTR_STRING
+ADD A,#1
+STR A, PTR_STRING
+
+LDR A, PTR_RESULTADO
+ADD A,#1
+STR A, PTR_RESULTADO
+
+JMP teste_cif_decif
+
+termina:
+LDR B, #0
+STR B, PTR_RESULTADO, I
+HLT
+
+ORG 192            ; Variáveis de entrada do trabalho
+    SRC: db 0      ; Contém o endereço de início do string de entrada;
+    DST: db 0      ; Contém o endereço de início do string processada;
+    PASSO: db 0    ; Contém o passo. Valor entre 1 e 25 
+    OPERACAO: db 0 ; Valor zero, se for cifragem, ou um valor diferente de zero, se for decifragem.
+
+
+ORG 185             ; variaveis auxiliares
+PTR_STRING: db 0
+PTR_RESULTADO: db 0 
