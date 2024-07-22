@@ -1,0 +1,499 @@
+
+;
+;  Leandra Machado
+;
+;
+; JOGO DA FORCA
+;==========================================================================
+
+;------------------------------------------------------------------------------
+;	Área reservada para os periféricos
+;------------------------------------------------------------------------------
+	; Acesso em 16 bits
+			org		hff80
+	STACK:	daw		[31]		
+	IVET:	dw		0			; Vetor de interrupção
+
+	; Acesso em 8 bits
+			dab		[23]
+	TIMDT:	db		0			; Registro de programação do timer
+	INTS:	db		0			; INTERRUPT STATUS: IP x x x . x x IPStec IPStim
+	INTE:	db		0			; INTERRUPT ENABLE: IE x x x . x x IEStec IEStim
+	TECST:	db		0			; Status do teclado
+	TECDT:	db		0			; Dado do teclado
+	VISOR:	dab		[36]		; Portas de acesso ao visor
+
+;==========================================================
+; Inicio do Programa Principal
+	org		0
+	
+	;Inicializa o processador e o hardware
+	MOV		#STACK,r6
+	
+	CLR		INTS			; Reset pedidos de interrup??o
+	CLR		TECST			; Reset estado do hardware do teclado
+	MOV		#isr,IVET		; Set Interrupt Service Rotine
+	MOV		#100,TIMDT		; Set timer para interromper a cada 100ms
+		
+	;Inicializa relogio
+	MOV		#4,r0
+	MOV		#Relogio,r1
+
+	loop_relogio:
+		CLR		(r1)+
+		SOB		r0,loop_relogio
+		
+	;Limpa o visor
+	MOV		#36,r0
+	MOV		#VISOR,r1
+	
+	loop_reset:
+		MOV		#' ',(r1)
+		INC		r1
+		SOB		r0,loop_reset
+		
+;==========================================================================
+;	Programa principal
+main:
+	MOV		#-1,Tecla
+	MOV		#VISOR,r0
+	MOV		#h83,INTE
+
+	MOV 	vidas_counter, r0
+	CMP		r0, #1			
+	BLT 	game_vidas_erro
+	CMP 	r0, #99
+	BGT 	game_vidas_erro
+	
+	MOV 	#palavra, r0
+	JSR		R7, PALAVRA_MAIUSCULA	
+	
+	JSR		R7, displayPalavraHide
+
+	JSR		R7, UNDERSCORE_PALAVRA_HIDE
+
+	CLR		flagGanhou
+
+	loop_main:
+		; coloca vidas na tela
+		MOV		#Vidas, r0
+		MOV		#6, r1
+		DEC		r0
+		JSR		r7, displayVidasStr
+
+		MOV		vidas_counter, r0
+		MOV		#VISOR+34, r1
+		JSR		r7, displayDec
+
+		TST		Tecla
+		BMI		loop_main
+
+		JSR		R7, JOGO
+
+		JSR		R7, COMPARA_STRINGS
+
+		CMP 	flagGanhou, #1
+		BEQ		game_winner
+
+		CMP 	vidas_counter, #0
+		BEQ 	game_over
+
+		BR		loop_main
+;==========================================================================
+; Mensagens de Jogo
+;==========================================================================
+	game_vidas_erro:
+		MOV		#qntVidasInvalidas, r0
+		MOV		#31, r1
+		DEC 	R0
+		JSR		R7, displayMsgVidaErro
+
+		HLT
+		
+		qntVidasInvalidas:	dab 'Quantidade de vidas invalidas! ',0
+
+	game_over:
+	;Limpa o visor
+		MOV		#36,r0
+		MOV		#VISOR,r1
+		
+		loop_reset_1:
+			MOV		#' ',(r1)
+			INC		r1
+			SOB		r0,loop_reset_1
+
+		mov		#Perdeu, r0
+		jsr		r7, displayStatusJogo
+		JSR		R7, displayTempo
+
+		; Coloca o Relogio no visor
+		mov		Minuto,r0
+		mov		#VISOR+31,r1
+		jsr		r7,displayDec
+		
+		mov		#':',VISOR+33
+
+		mov		Segundo,r0
+		mov		#VISOR+34,r1
+		jsr		r7,displayDec
+
+		hlt
+
+	game_winner:
+		;Limpa o visor
+		MOV		#36,r0
+		MOV		#VISOR,r1
+		
+		loop_reset_2:
+			MOV		#' ',(r1)
+			INC		r1
+			SOB		r0,loop_reset_2
+
+		MOV		#Ganhou,R0
+		JSR		R7,displayStatusJogo
+		JSR		R7, displayTempo
+
+		; Coloca o Relogio no visor
+		mov		Minuto,r0
+		mov		#VISOR+31,r1
+		jsr		r7,displayDec
+		
+		mov		#':',VISOR+33
+
+		mov		Segundo,r0
+		mov		#VISOR+34,r1
+		jsr		r7,displayDec
+
+		hlt
+
+;------------------------------------------------------------------------------
+;funções adicionais
+;------------------------------------------------------------------------------
+	COMPARA_STRINGS:		
+		MOV		#palavra, R0
+		MOV		#palavra_hide, R1
+
+		SUB		#2, R0
+		SUB		#2, R1
+
+		loop_compara_strings:
+			INC		R0	
+			INC		R1
+
+			MOV		(R0), R4
+			MOV		(R1), R5
+
+			AND 	#HFF, R4
+			AND 	#HFF, R5
+
+			CMP		R4,R5
+			BNE		encerra_loop
+
+			CMP		R4, #0
+			BEQ		inc_flag
+
+			BR loop_compara_strings
+
+			encerra_loop:
+				rts r7
+			inc_flag:
+				MOV		#1, flagGanhou
+				RTS		R7
+
+	JOGO:	
+		MOV		#palavra, R0
+		MOV		#palavra_hide, R1
+		MOV		Tecla, (R3)
+		MOV		#VISOR, R2
+
+		SUB		#2, R0
+		SUB		#2, R1
+		DEC		R2
+
+		loop_verifica_tecla:
+			INC		R0	
+			INC		R1
+			INC		R2
+
+			MOV		(R0), R5
+			AND		#HFF, R5
+
+			CMP 	R5, #0
+			BEQ		fim_string
+				
+			AND		#HFF, (R3)	
+			CMP		(R3), R5
+			BEQ		letra_encontrada
+				
+			BR		loop_verifica_tecla
+		
+		fim_string:
+			CMP 	flagString, #0
+			BEQ		letra_nao_encontrada
+			CLR		flagString
+			MOV		#-1, Tecla
+			RTS		R7
+
+		letra_encontrada:
+			AND 	#HFF00, (R1)
+			OR		(R3), (R1)
+			MOV		(R3), (R2)
+			INC		flagString
+			JMP 	loop_verifica_tecla
+		
+		letra_nao_encontrada:
+			DEC 	vidas_counter
+			CLR		flagString
+			MOV		#-1, Tecla
+			RTS		R7
+
+	PALAVRA_MAIUSCULA:
+		;inicializa palavra e coloca em maiuscula	
+		MOV		R0,-(R6)
+		MOV		R1,-(R6)
+		CLR		R3
+
+		SUB		#2,R0
+
+			loop_uppercase:
+				INC		R3
+				INC 	R0
+				MOV 	(r0),r1
+
+				AND		#HFF,R1
+				BEQ		end_uppercase
+
+				CMP 	R1, #'a'
+				BLT		loop_uppercase
+				CMP		R1, #'z'
+				BGT		loop_uppercase
+
+				AND		#H5F, R1
+				AND		#HFF00, (R0)
+				OR		R1,(R0)
+				BR		loop_uppercase
+			
+		end_uppercase:
+			MOV		(R6)+, R1
+			MOV		(R6)+, R0
+			DEC		R3
+			MOV		R3, tamPalavra
+			RTS 	R7
+
+	UNDERSCORE_PALAVRA_HIDE:
+		MOV     #palavra_hide, R1   ; R1 aponta para o início de palavra_hide
+		MOV     tamPalavra, R0      ; R0 contém o tamanho da palavra
+		DEC		R1
+		
+		loop_underscore_palavra_hide:
+			CMP     R0, #0            ; Verifica se atingiu o final da string
+			BEQ     underscore_palavra_hide_done
+
+			AND		#HFF00, (R1)
+			OR		#'_', (R1)
+			INC		R1
+			DEC     R0                ; Decrementa o contador de caracteres
+
+			BR      loop_underscore_palavra_hide
+
+		underscore_palavra_hide_done:
+			RTS     R7
+
+
+
+;------------------------------------------------------------------------------
+; INTERRUPÇÕES
+;------------------------------------------------------------------------------
+
+	isr:
+		mov		r0,-(r6)	
+		mov		r1,-(r6)
+		mov		r2,-(r6)
+		mov		r3,-(r6)
+		mov		r4,-(r6)
+		mov		r5,-(r6)
+
+		CMP 	INTS, #h83
+		BEQ 	ISRtec
+
+		CMP		INTS, #h82
+		BEQ		ISRtec
+
+	tstTimer:
+		CMP		INTS, #h81
+		beq		ISRtim
+
+	ISR2:
+
+		mov		(r6)+,r5	; Retorna os registradores da pilha
+		mov		(r6)+,r4
+		mov		(r6)+,r3
+		mov		(r6)+,r2
+		mov		(r6)+,r1
+		mov		(r6)+,r0
+
+		rti					; Return From Interrupt
+		
+	;------------------------------------------------------------------------------
+	; INTERRUPÇÃO DO TIMER
+	;------------------------------------------------------------------------------	
+		ISRtim:   
+			inc		Decimos
+			cmp		Decimos,#10
+			blt		ISRtim_Fim
+			clr		Decimos
+
+			inc		Segundo
+			cmp		Segundo,#60
+			blt		ISRtim_Fim
+			clr		Segundo
+
+			inc		Minuto
+			cmp		Minuto,#60
+			blt		ISRtim_Fim
+			clr		Minuto
+
+			inc		Hora
+			cmp		Hora,#24
+			blt		ISRtim_Fim
+			clr		Hora
+
+		ISRtim_Fim:
+			and		#hFFFE, INTS
+			JMP 	ISR2
+	;------------------------------------------------------------------------------
+	; INTERRUPÇÃO DO TECLADO
+	;------------------------------------------------------------------------------
+
+		ISRtec:
+			CMP		TECST, #h80
+			BNE 	ISRtec_Fim
+
+			MOV		TECDT, R0
+
+			AND 	#H5F, R0
+			CMP		R0, #'A'
+			BLT		ISRtec_Fim
+
+			CMP		R0, #'Z'
+			BGT		ISRtec_Fim
+
+			MOV		R0, Tecla
+
+		ISRtec_Fim:
+			CLR		TECST
+			AND 	#hFFFD, INTS
+			JMP 	tstTimer
+
+;------------------------------------------------------------------------------
+; COLOCAR INFORMACOES NA TELA
+;------------------------------------------------------------------------------
+	displayPalavraHide:
+			MOV     #VISOR, R2       	; Endereço do VISOR
+			MOV		tamPalavra, R1
+
+		displayPalavraHide_1:
+			MOV		#'_', (R2)
+
+			INC		R2
+			DEC		R1
+			
+			CMP 	R1, #0
+			BEQ		displayDone
+
+			BR		displayPalavraHide_1
+		displayDone:
+			RTS		R7
+	;----------------------------------
+	displayStatusJogo:
+		mov		#VISOR,R2
+		MOV		#13, R1
+		DEC		R0
+		displayStatusJogo_1:
+		mov		(r0),(R2)
+		inc		r0
+		inc		r2
+		dec		r1
+		bne		displayStatusJogo_1
+		
+		rts		r7
+	;----------------------------------
+
+	displayTempo:
+		mov		#VISOR+16,R2
+		MOV		#TempoDeJogo, R0
+		MOV		#15, R1
+		DEC		R0
+		displayTempo_1:
+		mov		(r0),(R2)
+		inc		r0
+		inc		r2
+		dec		r1
+		bne		displayTempo_1
+		
+		rts		r7
+	;----------------------------------
+	displayMsgVidaErro:
+		mov		#VISOR,R2
+		displayMsgVidaErro_1:
+		mov		(r0),(R2)
+		inc		r0
+		inc		r2
+		dec		r1
+		bne		displayMsgVidaErro_1
+		
+		rts		r7
+	;----------------------------------
+	displayVidasStr:
+			mov		#VISOR+28,R2
+		displayVidasStr_1:
+			mov		(r0),(R2)
+			inc		r0
+			inc		r2
+			dec		r1
+			bne		displayVidasStr_1
+		
+			rts		r7
+	;----------------------------------
+	displayDec:
+		clr		r2
+		dspDec_2:
+			cmp		r0,#10
+			blt		dspDec_1
+			sub		#10,r0
+			inc		r2
+			br		dspDec_2
+		dspDec_1:
+			add		#'0',r2
+			add		#'0',r0
+			mov		r2,(r1)
+			inc		r1
+			mov		r0,(r1)
+			rts		r7
+
+;------------------------------------------------------------------------------
+;Variáveis adicionais
+;------------------------------------------------------------------------------
+	ORG 	H1F40
+	vidas_counter:		dw	0
+	palavra:			dab [26], 0
+	palavra_hide:		dab [26], 0
+
+	Relogio:
+	Hora:				dw	0
+	Minuto:				dw	0
+	Segundo:			dw	0
+	Decimos:			dw	0
+
+	Tecla: 				dw 	0
+
+	Perdeu: 			dab 'Voce perdeu! ',0
+	Ganhou:				dab 'Voce Ganhou! ',0
+	TempoDeJogo:		dab	'Tempo de Jogo: ',0
+	Vidas: 				dab 'Vidas:', 0
+	
+	flagString:			dw	0
+	tamPalavra: 		dw	0
+	flagGanhou:			dw	0
+
+		
