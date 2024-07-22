@@ -3,14 +3,14 @@ ORG 0
 LDR A, #0
 LDR B, #0
 
-LDR A, SRC        	 ; endereÁo que contÈm o endereÁo do inicio da string
+LDR A, SRC        	 ; endere√ßo que cont√©m o endere√ßo do inicio da string
 STR A, PTR_STRING    ; armazenar em um ponteiro auxiliar
-LDR A, DST       	 ; endereÁo que contÈm o endereÁo do inicio da string result
+LDR A, DST       	 ; endere√ßo que cont√©m o endere√ßo do inicio da string result
 STR A, PTR_RESULTADO ; armazenar em um ponteiro auxiliar
 
-;teste para o endereÁo 195, contem a informacao se ir· ser trabalhado a cifragem ou decifragem
+;teste para o endere√ßo 195, contem a informacao se ir√° ser trabalhado a cifragem ou decifragem
 teste_cif_decif:
-LDR A, 195      ; endereÁo que contÈm o codigo da operacao
+LDR A, 195      ; endere√ßo que cont√©m o codigo da operacao
 JZ cifragem		; caso 0: cifragem 
 JMP decifragem  ; decifragem
 
@@ -33,8 +33,8 @@ SUB B, PTR_RESULTADO, I
 
 ;else{  proximo}   
 JZ proximo
-JN proximo                   ; Salta para a seÁ„o 'proximo' se o resultado for negativo
-JMP ajuste_decifragem        ; Salta para a seÁ„o 'ajuste'
+JN proximo                   ; Salta para a se√ß√£o 'proximo' se o resultado for negativo
+JMP ajuste_decifragem        ; Salta para a se√ß√£o 'ajuste'
 
 ajuste_decifragem:
 ; PTR_RESULTADO[i] =+26
@@ -52,8 +52,8 @@ STR B, PTR_RESULTADO, I ; Armazena o valor
 ; teste logico pra saber se precisa de ajuste
 SUB B, #90               ; Subtrai 90 do valor no registrador B
 JZ proximo
-JN proximo               ; Salta para a seÁ„o 'proximo' se o resultado for negativo
-JMP ajuste_cifragem      ; Salta para a seÁ„o 'ajuste'
+JN proximo               ; Salta para a se√ß√£o 'proximo' se o resultado for negativo
+JMP ajuste_cifragem      ; Salta para a se√ß√£o 'ajuste'
 
 ajuste_cifragem:
 LDR B, PTR_RESULTADO, I
@@ -77,10 +77,10 @@ LDR B, #0
 STR B, PTR_RESULTADO, I
 HLT
 
-ORG 192            ; Vari·veis de entrada do trabalho
-    SRC: db 0      ; ContÈm o endereÁo de inÌcio do string de entrada;
-    DST: db 0      ; ContÈm o endereÁo de inÌcio do string processada;
-    PASSO: db 0    ; ContÈm o passo. Valor entre 1 e 25 
+ORG 192            ; Vari√°veis de entrada do trabalho
+    SRC: db 0      ; Cont√©m o endere√ßo de in√≠cio do string de entrada;
+    DST: db 0      ; Cont√©m o endere√ßo de in√≠cio do string processada;
+    PASSO: db 0    ; Cont√©m o passo. Valor entre 1 e 25 
     OPERACAO: db 0 ; Valor zero, se for cifragem, ou um valor diferente de zero, se for decifragem.
 
 
